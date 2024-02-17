@@ -2,7 +2,6 @@
 
 use std::convert::TryFrom;
 use std::{fmt::Display, str::FromStr};
-use PNGme::GetBit5;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ChunkType {
