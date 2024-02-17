@@ -64,16 +64,20 @@ impl ChunkType {
             true
         }
     }
+    fn is_valid_bytes(&self) {
+        //NOT all u8 (0-255) are valid ASCII letters [A-Za-z]!
+        todo!()
+    }
 }
 impl TryFrom<[u8; 4]> for ChunkType {
     type Error = String;
     fn try_from(bytes: [u8; 4]) -> Result<Self, String> {
-        let new = Self::new(bytes);
-        if new.is_valid() {
-            return Ok(new);
-        } else {
-            return Err(format!("Invalid byte representation!"));
+        for byte in bytes.iter() {
+            if !byte.is_ascii_alphabetic() {
+                return Err(format!("Expected alphabetic ASCII, got {byte}"));
+            }
         }
+        Ok(ChunkType::new(bytes))
     }
 }
 impl FromStr for ChunkType {
@@ -89,9 +93,10 @@ impl FromStr for ChunkType {
 }
 impl Display for ChunkType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let formatted = self.data.map(|bit| format!("{}", bit));
-        let joined = formatted.join(",");
-        write!(f, "[{joined}]")
+        match std::str::from_utf8(self.data.as_slice()) {
+            Err(e) => write!(f, "{e}"),
+            Ok(val) => write!(f, "{val}"),
+        }
     }
 }
 #[cfg(test)]
