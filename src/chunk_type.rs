@@ -1,8 +1,8 @@
 #![allow(unused_variables)]
 
-use crate::{Error, Result};
 use std::convert::TryFrom;
 use std::{fmt::Display, str::FromStr};
+use PNGme::GetBit5;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ChunkType {
@@ -15,19 +15,13 @@ impl ChunkType {
     fn bytes(&self) -> [u8; 4] {
         self.data
     }
-    fn get_significant_bit(&self, idx: usize) -> &u8 {
+    fn get_significant_bit(&self, idx: usize) -> bool {
         if idx > 3 {
             panic!("valid range: 0-3");
         }
         match self.data.get(idx) {
             None => panic!("BUG: this byte should not be empty"),
-            Some(bit) => {
-                let mut current_bit = bit;
-                for _ in 0..5 {
-                    current_bit = &(current_bit % 2);
-                }
-                current_bit
-            }
+            Some(bit) => bit.is_ascii_uppercase(),
         }
     }
     fn is_valid(&self) -> bool {
@@ -39,7 +33,7 @@ impl ChunkType {
     }
     fn is_critical(&self) -> bool {
         let bit5 = self.get_significant_bit(0);
-        if *bit5 == 0 {
+        if bit5 {
             true
         } else {
             false
@@ -48,7 +42,7 @@ impl ChunkType {
 
     fn is_public(&self) -> bool {
         let bit5 = self.get_significant_bit(1);
-        if *bit5 == 0 {
+        if bit5 {
             true
         } else {
             false
@@ -56,7 +50,7 @@ impl ChunkType {
     }
     fn is_reserved_bit_valid(&self) -> bool {
         let bit5 = self.get_significant_bit(2);
-        if *bit5 == 0 {
+        if bit5 {
             true
         } else {
             false
@@ -65,30 +59,41 @@ impl ChunkType {
 
     fn is_safe_to_copy(&self) -> bool {
         let bit5 = self.get_significant_bit(3);
-        if *bit5 == 1 {
-            true
-        } else {
+        if bit5 {
             false
+        } else {
+            true
         }
     }
 }
 impl TryFrom<[u8; 4]> for ChunkType {
-    type Error = Error;
-    fn try_from(bytes: [u8; 4]) -> Result<Self> {
+    type Error = String;
+    fn try_from(bytes: [u8; 4]) -> Result<Self, String> {
         let new = Self::new(bytes);
         if new.is_valid() {
             return Ok(new);
         } else {
-            return Err(Error);
+            return Err(format!("Invalid byte representation!"));
         }
     }
 }
 impl FromStr for ChunkType {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self> {}
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, String> {
+        let as_bytes = s.bytes().into_iter().collect::<Vec<u8>>();
+        if as_bytes.len() != 4 {
+            return Err(format!("Invalid length"));
+        }
+        let arr = [as_bytes[0], as_bytes[1], as_bytes[2], as_bytes[3]];
+        Self::try_from(arr)
+    }
 }
 impl Display for ChunkType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {}
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let formatted = self.data.map(|bit| format!("{}", bit));
+        let joined = formatted.join(",");
+        write!(f, "[{joined}]")
+    }
 }
 #[cfg(test)]
 mod tests {
