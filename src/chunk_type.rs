@@ -64,20 +64,24 @@ impl ChunkType {
             true
         }
     }
-    fn is_valid_bytes(&self) {
-        //NOT all u8 (0-255) are valid ASCII letters [A-Za-z]!
-        todo!()
+    fn is_valid_bytes(&self) -> (bool, String) {
+        for byte in self.data.iter() {
+            if !byte.is_ascii_alphabetic() {
+                return (false, format!("{byte}"));
+            }
+        }
+        (true, format!("Success!"))
     }
 }
 impl TryFrom<[u8; 4]> for ChunkType {
     type Error = String;
     fn try_from(bytes: [u8; 4]) -> Result<Self, String> {
-        for byte in bytes.iter() {
-            if !byte.is_ascii_alphabetic() {
-                return Err(format!("Expected alphabetic ASCII, got {byte}"));
-            }
+        let new = ChunkType::new(bytes);
+        let (is_valid_bytes, msg) = new.is_valid_bytes();
+        if !is_valid_bytes {
+            return Err(format!("Expected ASCII alphabets, found: {msg}"));
         }
-        Ok(ChunkType::new(bytes))
+        Ok(new)
     }
 }
 impl FromStr for ChunkType {
